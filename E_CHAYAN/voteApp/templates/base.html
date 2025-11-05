@@ -1,0 +1,44 @@
+{% comment %} will add header and footer in this page {% endcomment %}
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% comment %} <link rel="icon" type="image/x-icon" href="{% static 'assets/favicon.ico' %}" /> {% endcomment %}
+    <!-- Bootstrap icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.4.1/font/bootstrap-icons.css" />
+    <link rel="stylesheet" href="{% static 'css/bootstrap.css' %}">
+    <link rel="stylesheet" href="{% static 'css/style.css %'}">
+    <title>E-CHAYAN - Vote Well</title>
+</head>
+<body>
+   <!-- Responsive navbar  -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container px-lg-5">
+            <a href="{% url 'index' %}" class="navbar-brand">E-CHAYAN</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+                    {% if request.user.is_authenticated %}
+                    <li class="nav-item"><a href="#" class="nav-link"><button class="btn btn-primary">Hi, {{request.user.username}}</button></a></li>
+                    <li class="nav-item"><a href="{% url 'logout' %}" class="nav-link"><button class="btn btn-secondary">Logout</button></a></li>
+                    {% else %}
+                    <li class="nav-item"><a href="{% url 'login' %}" class="nav-link"><button class="btn btn-secondary">Login</button></a></li>
+                    <li class="nav-item"><a href="{% url 'SignUp' %}" class="nav-link"><button class="btn btn-secondary">SignUp</button></a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% block content %}
+
+    {% endblock content %}
+    <!-- Footer -->
+     <footer class="py-5 bg-dark">
+        <div class="container"><p class="m-0 text-center text-white">Copyright &copy; E-CHAYAN 2025</p></div>
+     </footer>
+     <!-- Bootstrap core JS -->
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
