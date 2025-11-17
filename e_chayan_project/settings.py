@@ -38,7 +38,7 @@ ALLOWED_HOSTS = [
 
 # This adds your Render domain to the list, but only when it's on Render
 if RENDER_EXTERNAL_HOSTNAME:
-    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)ALLOWED_HOSTS = []
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 # Application definition
