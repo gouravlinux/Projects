@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -24,7 +25,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = "django-insecure-g9&4%m61r5l0me!sfckx+@1ax5!m9lb$)+6^@qx_=@(yaixus="
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# This automatically sets DEBUG to False when on Render
+DEBUG = os.environ.get('RENDER') != 'true'
 
 # settings.py
 
