@@ -3,7 +3,7 @@
 
 {% block content %}
 <div class="form-card">
-    <h1>Create Your Voter Account</h1>
+    <h1>Create Voter Account</h1>
     
     {% if error %}
         <div class="alert-message alert-error">{{ error }}</div>
@@ -12,57 +12,123 @@
     <div class="guidelines-box">
         <h4>Registration Guidelines</h4>
         <ul>
-            <li>You must be a <strong>citizen of India</strong> to register.</li>
-            <li>You must be <strong>18 years of age or older</strong>.</li>
-            <li>Register with your full legal name and a valid email address.</li>
-            <li>You may only register for <strong>one account</strong>. Duplicate accounts will be deleted.</li>
-            <li>Your profile will be reviewed by an administrator before you are eligible to vote.</li>
-            <li>By registering, you confirm that all information provided is true. <strong>Providing false information is a punishable offense, and legal action may be taken.</strong></li>
+            <li>You must be a citizen of India and <strong>18+ years old</strong>.</li>
+            <li><strong>Voter ID:</strong> Use your unique Electoral Photo Identity Card (EPIC) number.</li>
+            <li><strong>Password Policy:</strong> Must be at least 8 characters, contain mixed case letters, and preferably a number.</li>
+            <li>Providing false information is a punishable offense.</li>
         </ul>
     </div>
-    
+
     <form method="POST" action="{% url 'register' %}">
         {% csrf_token %}
-        <div class="form-group">
-            <label for="first_name">First Name</label>
-            <input type="text" id="first_name" name="first_name" required>
+        
+        <div class="row" style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label for="first_name">First Name</label>
+                <input type="text" id="first_name" name="first_name" required class="form-control">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label for="last_name">Last Name</label>
+                <input type="text" id="last_name" name="last_name" required class="form-control">
+            </div>
         </div>
+
         <div class="form-group">
-            <label for="last_name">Last Name</label>
-            <input type="text" id="last_name" name="last_name" required>
+            <label for="email">Email Address</label>
+            <input type="email" id="email" name="email" required class="form-control">
         </div>
+
         <div class="form-group">
-            <label for="email">Email</label>
-            <input type="email" id="email" name="email" required>
+            <label for="voter_id">Voter ID Number (EPIC)</label>
+            <input type="text" id="voter_id" name="voter_id" required class="form-control" placeholder="e.g., ABC1234567">
         </div>
+
         <div class="form-group">
-            <label for="username">Username</label>
-            <input type="text" id="username" name="username" required>
-        </div>
-        <div class="form-group">
-           <label for="reg-password">Password</label>
+            <label for="reg-password">Password</label>
             <div class="password-wrapper">
                 <input type="password" id="reg-password" name="password" class="form-control" required>
                 <i class="bi bi-eye-slash toggle-password-icon"></i>
-            </div> 
+            </div>
+            <small style="color: #6c757d; font-size: 0.8em;">Min 8 chars, generally hard to guess.</small>
         </div>
+
+        <div class="form-group">
+            <label for="confirm-password">Confirm Password</label>
+            <div class="password-wrapper">
+                <input type="password" id="confirm-password" name="confirm_password" class="form-control" required>
+                <i class="bi bi-eye-slash toggle-password-icon"></i>
+            </div>
+        </div>
+
         <div class="form-group">
             <label for="age">Age</label>
-            <input type="number" id="age" name="age" min="18" required>
+            <input type="number" id="age" name="age" min="18" required class="form-control">
         </div>
+
         <div class="form-group">
             <label for="state">State</label>
-            <select id="state" name="state">
+            <select id="state" name="state" class="form-select">
                 {% for value, label in states %}
                     <option value="{{ value }}">{{ label }}</option>
                 {% endfor %}
             </select>
         </div>
+
         <button type="submit" class="btn">Register</button>
-    </form>
+    </form>if request.method == "POST":
+        username = request.POST.get("username")
+        email = request.POST.get("email")
+        # ... (get all other fields: fname, lname, age, state) ...
+        
+        context = {'states': UserProfile.StateChoices.choices}
+
+        if User.objects.filter(username=username).exists():
+            context['error'] = "Username is already taken."
+            return render(request, 'votingApp/register.html', context)
+        if User.objects.filter(email=email).exists():
+            context['error'] = "Email is already registered."
+            return render(request, 'votingApp/register.html', context)
+
+        # --- MODIFIED: Create user but set as INACTIVE ---
+        new_user = User.objects.create_user(
+            username=username, 
+            password=request.POST.get("password"), 
+            email=email,
+            is_active=False  # <-- User can't log in yet
+        )
+        new_user.first_name = request.POST.get("first_name")
+        new_user.last_name = request.POST.get("last_name")
+        new_user.save()
+
+        UserProfile.objects.create(
+            user=new_user, 
+            age=request.POST.get("age"), 
+            state=request.POST.get("state")
+        )
+        
+        # --- NEW: Send OTP ---
+        otp = random.randint(100000, 999999)
+        
+        # Save OTP in session
+        request.session['verification_otp'] = otp
+        request.session['verification_user_id'] = new_user.id
+        request.session['otp_creation_time'] = time.time()
+        
+        # Send email
+        subject = 'Your e-Chayan Account Verification'
+        message = f'Your One-Time Password (OTP) for e-Chayan is: {otp}'
+        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+        
+        messages.success(request, "Registration successful! Please check your email for an OTP to activate your account.")
+        return redirect('verify_otp')
+
+    context = {'states': UserProfile.StateChoices.choices}
+    return render(request, 'votingApp/register.html', context)
+
+
     
     <div class="auth-link">
-        <p>Already have an account? <a href="{% url 'login' %}">Login here</a></p>
+        <p>Already registered? <a href="{% url 'login' %}">Login here</a></p>
     </div>
 </div>
 {% endblock %}

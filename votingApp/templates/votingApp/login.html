@@ -9,13 +9,13 @@
   <form method="POST" action="{% url 'login' %}">
     {% csrf_token %}
     <div class="form-group">
-      <label for="username">Username</label>
+      <label for="username">VoterId</label>
       <input
         type="text"
         id="username"
         name="username"
         class="form-control"
-        placeholder="Enter Your Username"
+        placeholder="Enter Your VoterId"
         required
       />
     </div>
