@@ -567,13 +567,21 @@ def candidate_login(request):
             # 1. Check if they are a candidate
             if hasattr(user, "candidate"):
                 
+                # --- ROBUST PROFILE CHECK (Fixes 500 Error) ---
+                try:
+                    profile = user.userprofile
+                except UserProfile.DoesNotExist:
+                    messages.error(request, "Critical Error: No User Profile found. Contact Admin.")
+                    return render(request, "votingApp/candidate_login.html")
+                # ----------------------------------------------
+
                 # 2. Check if Admin has verified them
-                if not user.userprofile.is_verified:
+                if not profile.is_verified:
                     messages.error(request, "Your candidacy is pending approval. Please wait for Admin verification.")
                     return render(request, "votingApp/candidate_login.html")
                 
                 # 3. Check if Email is verified (OTP)
-                if not user.userprofile.is_email_verified:
+                if not profile.is_email_verified:
                     messages.error(request, "Please verify your email first.")
                     return render(request, "votingApp/candidate_login.html")
 
