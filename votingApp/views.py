@@ -224,8 +224,13 @@ def logout_page(request):
 # (HEAVILY UPGRADED to show eligible elections)
 @login_required
 def dashboard_page(request):
+    if hasattr(request.user, 'candidate'):
+        return redirect('candidate_dashboard')
+
     now = timezone.now()
     profile = request.user.userprofile
+
+
 
     # 1. Get all active elections
     active_elections = Election.objects.filter(start_time__lte=now, end_time__gte=now)

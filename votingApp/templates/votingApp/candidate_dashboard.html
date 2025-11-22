@@ -3,6 +3,13 @@
 
 {% block content %}
 <div class="container">
+    {% if not candidate.user.userprofile.is_verified %}
+    <div class="alert-message alert-error" style="background-color: #fff3cd; color: #856404; border-color: #ffeeba;">
+        <h3>⚠️ Candidacy Pending</h3>
+        <p>Your application is currently under review by the Election Admin.</p>
+        <p><strong>You will not appear on the voting ballot until you are verified.</strong></p>
+    </div>
+    {% endif %}
     <h1>Welcome, {{ candidate.user.first_name }}</h1>
     
     <div class="candidate-card">
