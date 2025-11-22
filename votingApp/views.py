@@ -228,8 +228,13 @@ def dashboard_page(request):
         return redirect('candidate_dashboard')
 
     now = timezone.now()
-    profile = request.user.userprofile
-
+    try:
+        profile = request.user.userprofile
+    except UserProfile.DoesNotExist:
+        # If profile is missing, log them out and show an error
+        logout(request)
+        messages.error(request, "Error: Your account profile is missing. Please register again.")
+        return redirect('register')
 
 
     # 1. Get all active elections

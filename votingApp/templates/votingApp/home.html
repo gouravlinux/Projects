@@ -1,9 +1,17 @@
 {% extends 'votingApp/base.html' %}
 {% block title %}Home - e-Chayan{% endblock %}
+{% load static %}
 
 {% block content %}
 <div class="result-card" style="text-align: center; padding: 40px 20px;">
     
+    <div style="margin-bottom: 30px;">
+    <img 
+            src="{% static 'votingApp/images/echayanlogo.png' %}" 
+            alt="e-Chayan Logo" 
+            style="max-width: 150px; height: auto; border-radius: 10px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);"
+        >
+    </div>
     <h1 style="font-weight: 600; margin-bottom: 10px;">Welcome to e-Chayan</h1>
     <p style="font-size: 1.2em; color: #555;">The future of secure and convenient digital voting.</p>
     
@@ -17,9 +25,15 @@
     
     <br>
     
-    <div style="max-width: 400px; margin: 20px auto; display: flex; gap: 15px;">
-        <a href="{% url 'register' %}" class="btn btn-primary" style="width: 50%;">Register to Vote</a>
-        <a href="{% url 'login' %}" classs="btn btn-light border" style="width: 50%; padding: 12px; text-decoration: none; color: #212529; background-color: #f8f9fa; border-radius: 5px; font-weight: 500;">Login</a>
+        <div style="max-width: 400px; margin: 20px auto; display: flex; gap: 15px;">
+        <a href="{% url 'register' %}" class="btn btn-primary" style="width: 50%; color:#212529">Register to Vote</a>
+        <a 
+            href="{% url 'login' %}" 
+            class="btn btn-light border" 
+            style="width: 50%; padding: 12px; text-decoration: none; color: #212529; background-color: yellowgreen; border-radius: 5px; font-weight: 500;"
+        >
+            Login
+        </a>
     </div>
 
 </div>
