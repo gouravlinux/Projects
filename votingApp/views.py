@@ -635,14 +635,21 @@ def candidate_dashboard(request):
         elif choice == "new":
             new_party_name = request.POST.get("new_party_name")
             if new_party_name:
-                # Create new party if it doesn't exist
-                party, created = Party.objects.get_or_create(name=new_party_name)
+                # --- FIX: Check if party already exists ---
+                if Party.objects.filter(name=new_party_name).exists():
+                    # Show ERROR instead of joining
+                    messages.error(
+                        request,
+                        f"The party '{new_party_name}' already exists. Please select it from the 'Join Existing Party' list.",
+                    )
+                    return redirect("candidate_dashboard")
+
+                # If it doesn't exist, Create it
+                party = Party.objects.create(name=new_party_name)
                 candidate.party = party
                 candidate.save()
-                messages.success(request, f"Created and joined party: {party.name}")
+                messages.success(request, f"Created and joined new party: {party.name}")
 
-        # --- THE FIX IS HERE ---
-        # Correct: Redirect to the URL name, without 'request'
         return redirect("candidate_dashboard")
 
     # Pass all parties to template for the dropdown
