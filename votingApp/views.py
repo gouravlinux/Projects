@@ -597,7 +597,7 @@ def candidate_dashboard(request):
     candidate = request.user.candidate
 
     if request.method == "POST":
-        choice = request.POST.get("party_choice")
+        choice = request.POST.get("party_choice")  # independent, existing, new
 
         if choice == "independent":
             candidate.party = None
@@ -613,24 +613,21 @@ def candidate_dashboard(request):
 
         elif choice == "new":
             new_party_name = request.POST.get("new_party_name")
-            new_party_abbr = request.POST.get("new_party_abbr") # Get Abbr
-
             if new_party_name:
-                # --- LOGIC: Check if party exists ---
-                if Party.objects.filter(name=new_party_name).exists():
-                    messages.error(request, f"The party '{new_party_name}' already exists. Please select it from the list.")
-                    return redirect('candidate_dashboard')
-                
-                # If not, create it with Abbreviation
-                party = Party.objects.create(
-                    name=new_party_name,
-                    abbreviation=new_party_abbr # Save Abbr
-                )
+                # Create new party if it doesn't exist
+                party, created = Party.objects.get_or_create(name=new_party_name)
                 candidate.party = party
                 candidate.save()
-                messages.success(request, f"Created and joined {party.name} ({party.abbreviation})")
+                messages.success(request, f"Created and joined party: {party.name}")
 
+        # --- THE FIX IS HERE ---
+        # Correct: Redirect to the URL name, without 'request'
         return redirect('candidate_dashboard')
 
+    # Pass all parties to template for the dropdown
     parties = Party.objects.all()
-    return render(request, "votingApp/candidate_dashboard.html", {"candidate": candidate, "parties": parties})
+    return render(
+        request,
+        "votingApp/candidate_dashboard.html",
+        {"candidate": candidate, "parties": parties},
+    )
