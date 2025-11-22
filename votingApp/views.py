@@ -219,12 +219,7 @@ def logout_page(request):
 # --- 5. Dashboard Page ---
 # (HEAVILY UPGRADED to show eligible elections)
 @login_required
-@login_required
 def dashboard_page(request):
-    # 1. Redirect Candidates to their own dashboard
-    if hasattr(request.user, "candidate"):
-        return redirect("candidate_dashboard")
-
     # --- CRITICAL FIX: Handle Missing Profile ---
     try:
         profile = request.user.userprofile
@@ -269,10 +264,6 @@ def dashboard_page(request):
 
     return render(request, "votingApp/voting_dashboard.html", context)
 
-
-# At the bottom of votingApp/views.py
-
-# from django.contrib import messages
 
 
 @login_required
@@ -469,6 +460,12 @@ def candidate_register_page(request):
             error_context['error'] = "Passwords do not match."
             return render(request, 'votingApp/candidate_register.html', error_context)
 
+        try:
+            validate_password(pass1, user=User(username=username))
+        except ValidationError as e:
+            error_context['error'] = e.messages[0] # Show the specific error (e.g., "Too short")
+            return render(request, 'votingApp/candidate_register.html', error_context)
+        
         if User.objects.filter(username=username).exists():
             error_context['error'] = "Username already taken."
             return render(request, 'votingApp/candidate_register.html', error_context)

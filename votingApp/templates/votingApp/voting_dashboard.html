@@ -1,43 +1,69 @@
-{% extends 'votingApp/base.html' %}
-{% block title %}Dashboard - e-Chayan{% endblock %}
-
-{% block content %}
+{% extends 'votingApp/base.html' %} {% block title %}Dashboard - e-Chayan{% endblock %} {% block content %}
 <div class="container">
-    <h1>Welcome, {{ user.first_name }}!</h1>
-    
-    <div class="election-card">
-        <h3>Your Voter Profile</h3>
-        <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
-        <p><strong>Email:</strong> {{ user.email }}</p>
-        <p><strong>State:</strong> {{ user.userprofile.get_state_display }}</p>
-        <p><strong>Verification Status:</strong> 
-            {% if user.userprofile.is_verified %}
-                <span style="color: var(--success-color);">Verified</span>
-            {% else %}
-                <span style="color: var(--error-color);">Not Verified</span>
-                <br><small>Your profile is under review by an admin. You cannot vote until verified.</small>
-            {% endif %}
-        </p>
+  <div style="margin-bottom: 20px; text-align: right">
+    <a
+      href="{% url 'dashboard' %}"
+      class="btn"
+      style="background-color: var(--primary-color); color: white"
+    >
+      Go to Voting Dashboard (Cast Vote)
+    </a>
+  </div>
+  <div class="container">
+    {% if user.candidate %}
+    <div style="margin-bottom: 20px">
+      <a
+        href="{% url 'candidate_dashboard' %}"
+        class="btn"
+        style="background-color: #6f42c1; color: white"
+      >
+        Go to Candidate Dashboard
+      </a>
     </div>
-    
-    <h2>Available Elections</h2>
-    
-    {% for election in eligible_elections %}
-        <div class="election-card">
-            <h3>{{ election.name }}</h3>
-            <p>{{ election.description }}</p>
-            <p><strong>Type:</strong> {{ election.get_election_type_display }}</p>
-            <p><strong>Ends:</strong> {{ election.end_time }}</p>
-            
-            {% if election.user_has_voted %}
-                <span class="btn-voted">Already Voted</span>
-            {% else %}
-                <a href="{% url 'vote_page' election_slug=election.slug %}" class="btn-vote">Vote Now</a>
-            {% endif %}
-        </div>
-    {% empty %}
-        <p>There are no active elections you are eligible for at this time.</p>
-    {% endfor %}
+    {% endif %}
+    <h1>Welcome, {{ user.first_name }}!</h1>
 
+    <div class="election-card">
+      <h3>Your Voter Profile</h3>
+      <p><strong>Name:</strong> {{ user.first_name }} {{ user.last_name }}</p>
+      <p><strong>Email:</strong> {{ user.email }}</p>
+      <p><strong>State:</strong> {{ user.userprofile.get_state_display }}</p>
+      <p>
+        <strong>Verification Status:</strong>
+        {% if user.userprofile.is_verified %}
+        <span style="color: var(--success-color)">Verified</span>
+        {% else %}
+        <span style="color: var(--error-color)">Not Verified</span>
+        <br /><small
+          >Your profile is under review by an admin. You cannot vote until
+          verified.</small
+        >
+        {% endif %}
+      </p>
+    </div>
+
+    <h2>Available Elections</h2>
+
+    {% for election in eligible_elections %}
+    <div class="election-card">
+      <h3>{{ election.name }}</h3>
+      <p>{{ election.description }}</p>
+      <p><strong>Type:</strong> {{ election.get_election_type_display }}</p>
+      <p><strong>Ends:</strong> {{ election.end_time }}</p>
+
+      {% if election.user_has_voted %}
+      <span class="btn-voted">Already Voted</span>
+      {% else %}
+      <a
+        href="{% url 'vote_page' election_slug=election.slug %}"
+        class="btn-vote"
+        >Vote Now</a
+      >
+      {% endif %}
+    </div>
+    {% empty %}
+    <p>There are no active elections you are eligible for at this time.</p>
+    {% endfor %}
+  </div>
+  {% endblock %}
 </div>
-{% endblock %}
