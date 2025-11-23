@@ -1,86 +1,177 @@
 {% extends 'votingApp/base.html' %}
-{% block title %}Voter Registration - e-Chayan{% endblock %}
+{% block title %}Register - e-Chayan{% endblock %}
 
 {% block content %}
 <div class="form-card">
-    <h1>Create Voter Account</h1>
-    
+    <h1 class="text-center mb-4">Create Account</h1>
+
     {% if error %}
         <div class="alert-message alert-error">{{ error }}</div>
     {% endif %}
 
-    <div class="guidelines-box">
+    <div class="guidelines-box mb-4">
         <h4>Registration Guidelines</h4>
         <ul>
             <li>You must be a citizen of India and <strong>18+ years old</strong>.</li>
-            <li><strong>Voter ID:</strong> Use your unique Electoral Photo Identity Card (EPIC) number.</li>
-            <li><strong>Password Policy:</strong> Must be at least 8 characters, contain mixed case letters, and preferably a number.</li>
-            <li>Providing false information is a punishable offense.</li>
+            <li><strong>Voter ID:</strong> Use your unique EPIC number.</li>
+            <li><strong>Candidates:</strong> Must upload a photo and declare party affiliation.</li>
         </ul>
     </div>
 
-    <form method="POST" action="{% url 'register' %}">
-        {% csrf_token %}
+    <div class="tab-toggle-container">
+        <button class="tab-toggle-btn {% if active_tab == 'voter' or not active_tab %}active{% endif %}" 
+                id="voter-btn" onclick="switchTab('voter')">
+            <i class="bi bi-box-seam"></i> Voter Registration
+        </button>
         
-        <div class="row" style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex: 1;">
-                <label for="first_name">First Name</label>
-                <input type="text" id="first_name" name="first_name" required class="form-control">
+        <button class="tab-toggle-btn {% if active_tab == 'candidate' %}active{% endif %}" 
+                id="candidate-btn" onclick="switchTab('candidate')">
+            <i class="bi bi-person-badge"></i> Candidate Registration
+        </button>
+    </div>
+    <div id="voter-form-container" style="display: {% if active_tab == 'voter' or not active_tab %}block{% else %}none{% endif %};">
+        <form method="POST" action="{% url 'register' %}">
+            {% csrf_token %}
+            <div class="row" style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>First Name</label><input type="text" name="first_name" required class="form-control"></div>
+                <div class="form-group" style="flex: 1;"><label>Last Name</label><input type="text" name="last_name" required class="form-control"></div>
             </div>
-            <div class="form-group" style="flex: 1;">
-                <label for="last_name">Last Name</label>
-                <input type="text" id="last_name" name="last_name" required class="form-control">
+            <div class="form-group"><label>Email</label><input type="email" name="email" required class="form-control"></div>
+            <div class="form-group"><label>Voter ID</label><input type="text" name="voter_id" required class="form-control"></div>
+            
+            <div class="form-group"><label>Password</label>
+                <div class="password-wrapper"><input type="password" name="password" required class="form-control"><i class="bi bi-eye-slash toggle-password-icon"></i></div>
             </div>
-        </div>
-
-        <div class="form-group">
-            <label for="email">Email Address</label>
-            <input type="email" id="email" name="email" required class="form-control">
-        </div>
-
-        <div class="form-group">
-            <label for="voter_id">Voter ID Number (EPIC)</label>
-            <input type="text" id="voter_id" name="voter_id" required class="form-control" placeholder="e.g., ABC1234567">
-        </div>
-
-        <div class="form-group">
-            <label for="reg-password">Password</label>
-            <div class="password-wrapper">
-                <input type="password" id="reg-password" name="password" class="form-control" required>
-                <i class="bi bi-eye-slash toggle-password-icon"></i>
+            <div class="form-group"><label>Confirm Password</label>
+                <div class="password-wrapper"><input type="password" name="confirm_password" required class="form-control"><i class="bi bi-eye-slash toggle-password-icon"></i></div>
             </div>
-            <small style="color: #6c757d; font-size: 0.8em;">Min 8 chars, generally hard to guess.</small>
-        </div>
-
-        <div class="form-group">
-            <label for="confirm-password">Confirm Password</label>
-            <div class="password-wrapper">
-                <input type="password" id="confirm-password" name="confirm_password" class="form-control" required>
-                <i class="bi bi-eye-slash toggle-password-icon"></i>
+            
+            <div class="form-group"><label>Age</label><input type="number" name="age" min="18" required class="form-control"></div>
+            <div class="form-group">
+                <label>State</label>
+                <select name="state" class="form-select">
+                    {% for value, label in states %}
+                        <option value="{{ value }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
             </div>
-        </div>
+            <button type="submit" class="btn mt-3">Register as Voter</button>
+        </form>
+    </div>
 
-        <div class="form-group">
-            <label for="age">Age</label>
-            <input type="number" id="age" name="age" min="18" required class="form-control">
-        </div>
+    <div id="candidate-form-container" style="display: {% if active_tab == 'candidate' %}block{% else %}none{% endif %};">
+        <form method="POST" action="{% url 'candidate_register' %}" enctype="multipart/form-data">
+            {% csrf_token %}
+            
 
-        <div class="form-group">
-            <label for="state">State</label>
-            <select id="state" name="state" class="form-select">
-                {% for value, label in states %}
-                    <option value="{{ value }}">{{ label }}</option>
-                {% endfor %}
-            </select>
-        </div>
+            <div class="row" style="display: flex; gap: 10px;">
+                <div class="form-group" style="flex: 1;"><label>First Name</label><input type="text" name="first_name" required class="form-control"></div>
+                <div class="form-group" style="flex: 1;"><label>Last Name</label><input type="text" name="last_name" required class="form-control"></div>
+            </div>
+            <div class="form-group"><label>Email</label><input type="email" name="email" required class="form-control"></div>
+            <div class="form-group"><label>Username / ID</label><input type="text" name="username" required class="form-control"></div>
+            
+            <div class="form-group"><label>Password</label>
+                <div class="password-wrapper"><input type="password" name="password" required class="form-control"><i class="bi bi-eye-slash toggle-password-icon"></i></div>
+            </div>
+            <div class="form-group"><label>Confirm Password</label>
+                <div class="password-wrapper"><input type="password" name="confirm_password" required class="form-control"><i class="bi bi-eye-slash toggle-password-icon"></i></div>
+            </div>
 
-        <button type="submit" class="btn">Register as Voter</button>
-    </form>
-    
-    <div class="auth-link">
-        <p>Already registered? <a href="{% url 'login' %}">Login here</a></p>
-        <hr style="margin: 10px 0; border-color: #eee;">
-        <p>Want to participate in election? <a href="{% url 'candidate_register' %}">Register as Candidate</a></p>
+            <h5 class="mt-3 text-primary">Election Details</h5>
+            <div class="form-group">
+                <label>Election</label>
+                <select name="election_id" required class="form-select">
+                    <option value="">-- Select Election --</option>
+                    {% for election in elections %}
+                        <option value="{{ election.id }}">{{ election.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label>State</label>
+                <select name="state" required class="form-select">
+                    <option value="">-- Select State --</option>
+                    {% for code, name in states %}
+                        <option value="{{ code }}">{{ name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <h5 class="mt-3 text-primary">Party Affiliation</h5>
+            <div class="form-group">
+                <select id="party_select" name="party_select" class="form-control" onchange="togglePartyFields()">
+                    <option value="existing">Choose Existing Party</option>
+                    <option value="independent">Independent</option>
+                    <option value="new">Create New Party</option>
+                </select>
+            </div>
+
+            <div id="existing_party_div" class="form-group">
+                <label>Select Party</label>
+                <select name="existing_party_id" class="form-control">
+                    {% for party in parties %}
+                        <option value="{{ party.id }}">{{ party.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div id="new_party_div" class="form-group" style="display: none;">
+                <label>New Party Name</label>
+                <input type="text" name="new_party_name" class="form-control">
+                <label class="mt-2">Abbreviation</label>
+                <input type="text" name="new_party_abbr" class="form-control" placeholder="e.g. BJP">
+                <label class="mt-2">Symbol</label>
+                <input type="file" name="new_party_symbol" class="form-control" accept="image/*">
+            </div>
+
+            <button type="submit" class="btn mt-3" style="background-color: #6f42c1;">Register as Candidate</button>
+        </form>
+    </div>
+
+    <div class="auth-link mt-4">
+        <p>Already have an account? <a href="{% url 'login' %}">Login Here</a></p>
     </div>
 </div>
+
+<script>
+    // JavaScript to handle the Tab Switching
+    function switchTab(tabName) {
+        // Get elements
+        const voterForm = document.getElementById('voter-form-container');
+        const candidateForm = document.getElementById('candidate-form-container');
+        const voterBtn = document.getElementById('voter-btn');
+        const candidateBtn = document.getElementById('candidate-btn');
+
+        if (tabName === 'voter') {
+            voterForm.style.display = 'block';
+            candidateForm.style.display = 'none';
+            voterBtn.classList.add('active');
+            candidateBtn.classList.remove('active');
+        } else {
+            voterForm.style.display = 'none';
+            candidateForm.style.display = 'block';
+            voterBtn.classList.remove('active');
+            candidateBtn.classList.add('active');
+        }
+    }
+
+    // JavaScript for Party Toggle (Candidate Form)
+    function togglePartyFields() {
+        const status = document.getElementById('party_select').value;
+        const existingDiv = document.getElementById('existing_party_div');
+        const newDiv = document.getElementById('new_party_div');
+
+        if (status === 'existing') {
+            existingDiv.style.display = 'block';
+            newDiv.style.display = 'none';
+        } else if (status === 'new') {
+            existingDiv.style.display = 'none';
+            newDiv.style.display = 'block';
+        } else { 
+            existingDiv.style.display = 'none';
+            newDiv.style.display = 'none';
+        }
+    }
+</script>
 {% endblock %}

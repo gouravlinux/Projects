@@ -1,48 +1,72 @@
-{% extends 'votingApp/base.html' %} {% block title %}Login - e-Chayan{% endblock %} {% block content %}
+{% extends 'votingApp/base.html' %}
+{% block title %}Login - e-Chayan{% endblock %}
+
+{% block content %}
 <div class="form-card">
-  <h1>Voter Login</h1>
+    <h1 class="text-center mb-4">Login to e-Chayan</h1>
 
-  {% if error %}
-  <div class="alert-message alert-error">{{ error }}</div>
-  {% endif %}
+    {% if error %}
+        <div class="alert-message alert-error">{{ error }}</div>
+    {% endif %}
 
-  <form method="POST" action="{% url 'login' %}">
-    {% csrf_token %}
-    <div class="form-group">
-      <label for="username">VoterId</label>
-      <input
-        type="text"
-        id="username"
-        name="username"
-        class="form-control"
-        placeholder="Enter Your VoterId"
-        required
-      />
+    <ul class="nav nav-tabs nav-fill mb-4" id="loginTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'voter' or not active_tab %}active{% endif %}" 
+                    id="voter-tab" data-bs-toggle="tab" data-bs-target="#voter-login" type="button" role="tab">
+                🗳️ Voter Login
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link {% if active_tab == 'candidate' %}active{% endif %}" 
+                    id="candidate-tab" data-bs-toggle="tab" data-bs-target="#candidate-login" type="button" role="tab">
+                👤 Candidate Login
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="loginTabsContent">
+        
+        <div class="tab-pane fade {% if active_tab == 'voter' or not active_tab %}show active{% endif %}" id="voter-login" role="tabpanel">
+            <form method="POST" action="{% url 'login' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Voter ID / Username</label>
+                    <input type="text" name="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" name="password" class="form-control" required>
+                        <i class="bi bi-eye-slash toggle-password-icon"></i>
+                    </div>
+                </div>
+                <button type="submit" class="btn mt-3">Login as Voter</button>
+            </form>
+        </div>
+
+        <div class="tab-pane fade {% if active_tab == 'candidate' %}show active{% endif %}" id="candidate-login" role="tabpanel">
+            <form method="POST" action="{% url 'candidate_login' %}">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label>Candidate ID / Username</label>
+                    <input type="text" name="username" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <div class="password-wrapper">
+                        <input type="password" name="password" class="form-control" required>
+                        <i class="bi bi-eye-slash toggle-password-icon"></i>
+                    </div>
+                </div>
+                <button type="submit" class="btn mt-3" style="background-color: #6f42c1;">Login to Dashboard</button>
+            </form>
+        </div>
+
     </div>
 
-    <div class="form-group">
-      <label for="login-password">Password</label>
-      <div class="password-wrapper">
-        <input
-          type="password"
-          id="login-password"
-          name="password"
-          class="form-control"
-          placeholder="Enter Your Password"
-          required
-        />
-        <i class="bi bi-eye-slash toggle-password-icon"></i>
-      </div>
+    <div class="auth-link mt-4">
+        <p>Don't have an account? <a href="{% url 'register' %}">Register Here</a></p>
+        <p><a href="{% url 'password_reset' %}">Forgot password?</a></p>
     </div>
-    <button type="submit" class="btn">Login</button>
-  </form>
-
-  <div class="auth-link">
-    <p>
-      Don't have an account? <a href="{% url 'register' %}">Register here</a>
-      <p>Want to login as Candidate? <a href="{% url 'candidate_login' %}">Login as Candidate</a></p>
-    </p>
-    <p><a href="{% url 'password_reset' %}">Forgot password?</a></p>
-  </div>
 </div>
 {% endblock %}
