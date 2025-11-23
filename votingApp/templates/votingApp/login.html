@@ -3,65 +3,57 @@
 
 {% block content %}
 <div class="form-card">
-    <h1 class="text-center mb-4">Login to e-Chayan</h1>
+    <h1 class="text-center mb-4">Login</h1>
 
     {% if error %}
         <div class="alert-message alert-error">{{ error }}</div>
     {% endif %}
 
-    <ul class="nav nav-tabs nav-fill mb-4" id="loginTabs" role="tablist">
-        <li class="nav-item" role="presentation">
-            <button class="nav-link {% if active_tab == 'voter' or not active_tab %}active{% endif %}" 
-                    id="voter-tab" data-bs-toggle="tab" data-bs-target="#voter-login" type="button" role="tab">
-                🗳️ Voter Login
-            </button>
-        </li>
-        <li class="nav-item" role="presentation">
-            <button class="nav-link {% if active_tab == 'candidate' %}active{% endif %}" 
-                    id="candidate-tab" data-bs-toggle="tab" data-bs-target="#candidate-login" type="button" role="tab">
-                👤 Candidate Login
-            </button>
-        </li>
-    </ul>
-
-    <div class="tab-content" id="loginTabsContent">
+    <div class="tab-toggle-container">
+        <button class="tab-toggle-btn {% if active_tab == 'voter' or not active_tab %}active{% endif %}" 
+                id="voter-btn" onclick="switchLoginTab('voter')">
+            <i class="bi bi-person"></i> Voter Login
+        </button>
         
-        <div class="tab-pane fade {% if active_tab == 'voter' or not active_tab %}show active{% endif %}" id="voter-login" role="tabpanel">
-            <form method="POST" action="{% url 'login' %}">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label>Voter ID / Username</label>
-                    <input type="text" name="username" class="form-control" required>
+        <button class="tab-toggle-btn {% if active_tab == 'candidate' %}active{% endif %}" 
+                id="candidate-btn" onclick="switchLoginTab('candidate')">
+            <i class="bi bi-person-badge-fill"></i> Candidate Login
+        </button>
+    </div>
+    <div id="voter-login-form" style="display: {% if active_tab == 'voter' or not active_tab %}block{% else %}none{% endif %};">
+        <form method="POST" action="{% url 'login' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Voter ID / Username</label>
+                <input type="text" name="username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <div class="password-wrapper">
+                    <input type="password" name="password" class="form-control" required>
+                    <i class="bi bi-eye-slash toggle-password-icon"></i>
                 </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" name="password" class="form-control" required>
-                        <i class="bi bi-eye-slash toggle-password-icon"></i>
-                    </div>
-                </div>
-                <button type="submit" class="btn mt-3">Login as Voter</button>
-            </form>
-        </div>
+            </div>
+            <button type="submit" class="btn mt-3">Login as Voter</button>
+        </form>
+    </div>
 
-        <div class="tab-pane fade {% if active_tab == 'candidate' %}show active{% endif %}" id="candidate-login" role="tabpanel">
-            <form method="POST" action="{% url 'candidate_login' %}">
-                {% csrf_token %}
-                <div class="form-group">
-                    <label>Candidate ID / Username</label>
-                    <input type="text" name="username" class="form-control" required>
+    <div id="candidate-login-form" style="display: {% if active_tab == 'candidate' %}block{% else %}none{% endif %};">
+        <form method="POST" action="{% url 'candidate_login' %}">
+            {% csrf_token %}
+            <div class="form-group">
+                <label>Candidate ID / Username</label>
+                <input type="text" name="username" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <div class="password-wrapper">
+                    <input type="password" name="password" class="form-control" required>
+                    <i class="bi bi-eye-slash toggle-password-icon"></i>
                 </div>
-                <div class="form-group">
-                    <label>Password</label>
-                    <div class="password-wrapper">
-                        <input type="password" name="password" class="form-control" required>
-                        <i class="bi bi-eye-slash toggle-password-icon"></i>
-                    </div>
-                </div>
-                <button type="submit" class="btn mt-3" style="background-color: #6f42c1;">Login to Dashboard</button>
-            </form>
-        </div>
-
+            </div>
+            <button type="submit" class="btn mt-3" style="background-color: #6f42c1;">Login as Candidate</button>
+        </form>
     </div>
 
     <div class="auth-link mt-4">
@@ -69,4 +61,25 @@
         <p><a href="{% url 'password_reset' %}">Forgot password?</a></p>
     </div>
 </div>
+
+<script>
+    function switchLoginTab(tab) {
+        const voterForm = document.getElementById('voter-login-form');
+        const candidateForm = document.getElementById('candidate-login-form');
+        const voterBtn = document.getElementById('voter-btn');
+        const candidateBtn = document.getElementById('candidate-btn');
+
+        if (tab === 'voter') {
+            voterForm.style.display = 'block';
+            candidateForm.style.display = 'none';
+            voterBtn.classList.add('active');
+            candidateBtn.classList.remove('active');
+        } else {
+            voterForm.style.display = 'none';
+            candidateForm.style.display = 'block';
+            voterBtn.classList.remove('active');
+            candidateBtn.classList.add('active');
+        }
+    }
+</script>
 {% endblock %}

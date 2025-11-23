@@ -1,115 +1,86 @@
-{% extends 'votingApp/base.html' %} {% block title %}Candidate Dashboard -
-e-Chayan{% endblock %} {% block content %}
+{% extends 'votingApp/base.html' %}
+{% block title %}Candidate Dashboard - e-Chayan{% endblock %}
+
+{% block content %}
 <div class="container">
-  {% if not candidate.user.userprofile.is_verified %}
-  <div
-    class="alert-message alert-error"
-    style="background-color: #fff3cd; color: #856404; border-color: #ffeeba"
-  >
-    <h3>⚠️ Candidacy Pending</h3>
-    <p>Your application is currently under review by the Election Admin.</p>
-    <p>
-      <strong
-        >You will not appear on the voting ballot until you are
-        verified.</strong
-      >
-    </p>
-  </div>
-  {% endif %}
-  <h1>Welcome, {{ candidate.user.first_name }}</h1>
 
-  <div class="candidate-card">
-    <h3>Current Status</h3>
-    <p>Running for: <strong>{{ candidate.election.name }}</strong></p>
-    <p>
-      Current Party:
-      <span class="status-text">
-        {% if candidate.party %} {{ candidate.party.name }} {% else %}
-        Independent (No Party) {% endif %}
-      </span>
-    </p>
-  </div>
-
-  <div class="candidate-card">
-    <h3>Edit Party Affiliation</h3>
-    <form method="POST">
-      {% csrf_token %}
-
-      <div class="option-group">
-        <input
-          type="radio"
-          name="party_choice"
-          value="independent"
-          id="opt_ind"
-          onclick="toggleInputs()"
-          checked
-        />
-        <label for="opt_ind"><strong>Run as Independent</strong></label>
-      </div>
-
-      <div class="option-group">
-        <input
-          type="radio"
-          name="party_choice"
-          value="existing"
-          id="opt_exist"
-          onclick="toggleInputs()"
-        />
-        <label for="opt_exist"><strong>Join Existing Party</strong></label>
-
-        <div id="existing_input" style="display: none; margin-top: 15px">
-          <select name="existing_party_id" class="form-control">
-            {% for party in parties %}
-            <option value="{{ party.id }}">{{ party.name }}</option>
-            {% endfor %}
-          </select>
+    <div class="tab-toggle-container" style="max-width: 600px; margin: 20px auto;">
+        <div class="tab-toggle-btn active">
+            <i class="bi bi-person-workspace"></i> Manage Campaign
         </div>
-      </div>
+        <a href="{% url 'dashboard' %}" class="tab-toggle-btn" style="text-decoration: none;">
+            <i class="bi bi-check2-circle"></i> Cast My Vote
+        </a>
+    </div>
 
-      <div class="option-group">
-        <input
-          type="radio"
-          name="party_choice"
-          value="new"
-          id="opt_new"
-          onclick="toggleInputs()"
-        />
-        <label for="opt_new"><strong>Create and Join New Party</strong></label>
-        <label>Party Symbol</label>
-        <input
-          type="file"
-          name="new_party_symbol"
-          class="form-control"
-          accept="image/*"
-        />
+    {% if not candidate.user.userprofile.is_verified %}
+    <div class="alert-message alert-error" style="background-color: #fff3cd; color: #856404; border-color: #ffeeba">
+        <h3>⚠️ Candidacy Pending</h3>
+        <p>Your application is currently under review by the Election Admin.</p>
+        <p><strong>You will not appear on the voting ballot until you are verified.</strong></p>
+    </div>
+    {% endif %}
 
-        <div id="new_input" style="display: none; margin-top: 15px">
-          <input
-            type="text"
-            name="new_party_name"
-            placeholder="Enter Party Name"
-            class="form-control"
-          />
-          <input type="text" name="new_party_abbr" placeholder="Abbreviation (e.g. BJP)" class="form-control" style="margin-top: 10px;">
-        </div>
-      </div>
+    <h1>Welcome, {{ candidate.user.first_name }}</h1>
 
-      <button type="submit" class="btn" style="margin-top: 10px">
-        Update Affiliation
-      </button>
-    </form>
-  </div>
+    <div class="candidate-card">
+        <h3>Current Status</h3>
+        <p>Running for: <strong>{{ candidate.election.name }}</strong></p>
+        <p>Current Party: 
+            <span class="status-text">
+                {% if candidate.party %} {{ candidate.party.name }} {% else %} Independent (No Party) {% endif %}
+            </span>
+        </p>
+    </div>
+
+    <div class="candidate-card">
+        <h3>Edit Party Affiliation</h3>
+        
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+
+            <div class="option-group">
+                <input type="radio" name="party_choice" value="independent" id="opt_ind" onclick="toggleInputs()" checked />
+                <label for="opt_ind"><strong>Run as Independent</strong></label>
+            </div>
+
+            <div class="option-group">
+                <input type="radio" name="party_choice" value="existing" id="opt_exist" onclick="toggleInputs()" />
+                <label for="opt_exist"><strong>Join Existing Party</strong></label>
+
+                <div id="existing_input" style="display: none; margin-top: 15px">
+                    <select name="existing_party_id" class="form-control">
+                        {% for party in parties %}
+                        <option value="{{ party.id }}">{{ party.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="option-group">
+                <input type="radio" name="party_choice" value="new" id="opt_new" onclick="toggleInputs()" />
+                <label for="opt_new"><strong>Create and Join New Party</strong></label>
+
+                <div id="new_input" style="display: none; margin-top: 15px">
+                    <input type="text" name="new_party_name" placeholder="Enter Party Name" class="form-control" />
+                    
+                    <input type="text" name="new_party_abbr" placeholder="Abbreviation (e.g. BJP)" class="form-control" style="margin-top: 10px;">
+                    
+                    <label style="margin-top: 10px;">Party Symbol</label>
+                    <input type="file" name="new_party_symbol" class="form-control" accept="image/*" />
+                </div>
+            </div>
+
+            <button type="submit" class="btn" style="margin-top: 10px">Update Affiliation</button>
+        </form>
+    </div>
 </div>
 
 <script>
-  function toggleInputs() {
-    const choice = document.querySelector(
-      'input[name="party_choice"]:checked'
-    ).value;
-    document.getElementById("existing_input").style.display =
-      choice === "existing" ? "block" : "none";
-    document.getElementById("new_input").style.display =
-      choice === "new" ? "block" : "none";
-  }
+    function toggleInputs() {
+        const choice = document.querySelector('input[name="party_choice"]:checked').value;
+        document.getElementById("existing_input").style.display = choice === "existing" ? "block" : "none";
+        document.getElementById("new_input").style.display = choice === "new" ? "block" : "none";
+    }
 </script>
 {% endblock %}
