@@ -13,72 +13,46 @@ from django.core.mail import send_mail
 from django.conf import settings
 from django.http import JsonResponse
 import time
-import smtplib  # Required for catching specific email errors
-
-# votingApp/views.py
-
-# ... (Keep all your existing imports) ...
-
+import re # Required for password complexity checks
 
 # --- HELPER: Generate Unique Voter ID ---
 def generate_unique_voter_id(state_code):
-    # Map 2-letter DB codes to 3-letter ID prefixes
     state_map = {
-        "AP": "AND",
-        "AR": "ARN",
-        "AS": "ASM",
-        "BR": "BIH",
-        "CT": "CHT",
-        "GA": "GOA",
-        "GJ": "GUJ",
-        "HR": "HAR",
-        "HP": "HIM",
-        "JH": "JHA",
-        "KA": "KAR",
-        "KL": "KER",
-        "MP": "MDP",
-        "MH": "MAH",
-        "MN": "MNP",
-        "ML": "MEG",
-        "MZ": "MIZ",
-        "NL": "NAG",
-        "OR": "ODI",
-        "PB": "PUN",
-        "RJ": "RAJ",
-        "SK": "SIK",
-        "TN": "TND",
-        "TG": "TEL",
-        "TR": "TRI",
-        "UP": "UTP",
-        "UK": "UTK",
-        "WB": "WBE",
-        "DL": "DEL",
-        # Add others as needed, default to the 2-letter code if missing
+        "AP": "AND", "AR": "ARN", "AS": "ASM", "BR": "BIH", "CT": "CHT",
+        "GA": "GOA", "GJ": "GUJ", "HR": "HAR", "HP": "HIM", "JH": "JHA",
+        "KA": "KAR", "KL": "KER", "MP": "MDP", "MH": "MAH", "MN": "MNP",
+        "ML": "MEG", "MZ": "MIZ", "NL": "NAG", "OR": "ODI", "PB": "PUN",
+        "RJ": "RAJ", "SK": "SIK", "TN": "TND", "TG": "TEL", "TR": "TRI",
+        "UP": "UTP", "UK": "UTK", "WB": "WBE", "DL": "DEL",
     }
-
     prefix = state_map.get(state_code, state_code).upper()
-
     while True:
-        # Generate 7 random digits
         numbers = random.randint(1000000, 9999999)
         new_id = f"{prefix}{numbers}"
-
-        # Check if this ID already exists in the User table (username)
         if not User.objects.filter(username=new_id).exists():
             return new_id
 
+# --- HELPER: Check Password Complexity ---
+def check_password_complexity(password):
+    if len(password) < 8:
+        return "Password must be at least 8 characters long."
+    if not re.search(r'[A-Z]', password):
+        return "Password must contain at least one uppercase letter."
+    if not re.search(r'\d', password):
+        return "Password must contain at least one number."
+    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        return "Password must contain at least one special character (e.g. @, #, $)."
+    return None
 
 def get_election_details(request):
     election_id = request.GET.get("election_id")
     if election_id:
         try:
             election = Election.objects.get(id=election_id)
-            return JsonResponse(
-                {
-                    "type": election.election_type,  # 'N' or 'S'
-                    "state": election.state,  # State code (e.g. 'MH') or None
-                }
-            )
+            return JsonResponse({
+                "type": election.election_type,
+                "state": election.state,
+            })
         except Election.DoesNotExist:
             return JsonResponse({"error": "Election not found"}, status=404)
     return JsonResponse({"error": "Invalid request"}, status=400)
@@ -90,9 +64,7 @@ def home_page(request):
         total_voters = UserProfile.objects.filter(is_verified=True).count()
         total_votes_cast = VoterRecord.objects.count()
         if total_voters > 0:
-            turnout = (
-                total_votes_cast / (total_voters * Election.objects.count())
-            ) * 100
+            turnout = (total_votes_cast / (total_voters * Election.objects.count())) * 100
             turnout_percentage = round(turnout, 1)
         else:
             turnout_percentage = 0
@@ -103,22 +75,21 @@ def home_page(request):
 
 
 # --- 2. Voter Registration ---
-# In votingApp/views.py
-
-
 def register_page(request):
     context = {"states": UserProfile.StateChoices.choices, "active_tab": "voter"}
+    
+    # Pass candidate data in case they switch tabs
+    context['elections'] = Election.objects.all()
+    context['parties'] = Party.objects.all()
 
     if request.method == "POST":
-        # --- REMOVED: voter_id = request.POST.get("voter_id") ---
-
         email = request.POST.get("email")
         pass1 = request.POST.get("password")
         pass2 = request.POST.get("confirm_password")
         fname = request.POST.get("first_name")
         lname = request.POST.get("last_name")
         age = request.POST.get("age")
-        state = request.POST.get("state")  # We need state first now!
+        state = request.POST.get("state")
 
         if User.objects.filter(email=email).exists():
             context["error"] = "This Email is already registered."
@@ -127,23 +98,28 @@ def register_page(request):
         if pass1 != pass2:
             context["error"] = "Passwords do not match."
             return render(request, "votingApp/register.html", context)
+            
+        # --- 1. Check Custom Complexity (Capital, Number, Special Char) ---
+        complexity_error = check_password_complexity(pass1)
+        if complexity_error:
+            context["error"] = complexity_error
+            return render(request, "votingApp/register.html", context)
 
-        # --- NEW: Generate ID ---
+        # --- Generate ID ---
         generated_voter_id = generate_unique_voter_id(state)
 
-        # Validate password using the GENERATED ID (as username)
+        # --- 2. Check Django Validators (Common Password, User Similarity) ---
         try:
             validate_password(pass1, user=User(username=generated_voter_id))
         except ValidationError as e:
-            context["error"] = e.messages[0]
+            context["error"] = " ".join(e.messages)
             return render(request, "votingApp/register.html", context)
 
-        # Create User with Generated ID
         new_user = User.objects.create_user(
-            username=generated_voter_id,  # Using generated ID
-            password=pass1,
-            email=email,
-            is_active=False,
+            username=generated_voter_id, 
+            password=pass1, 
+            email=email, 
+            is_active=False
         )
         new_user.first_name = fname
         new_user.last_name = lname
@@ -151,35 +127,26 @@ def register_page(request):
 
         UserProfile.objects.create(user=new_user, age=age, state=state)
 
-        # ... (OTP Logic remains the same) ...
         otp = random.randint(100000, 999999)
         request.session["verification_otp"] = otp
         request.session["verification_user_id"] = new_user.id
         request.session["otp_creation_time"] = time.time()
 
-        # Send email code...
         try:
             send_mail(
-                "Your e-Chayan OTP",
-                f"OTP: {otp}\nYour Voter ID is: {generated_voter_id}",
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
+                "Your e-Chayan OTP", 
+                f"OTP: {otp}\nYour Voter ID is: {generated_voter_id}", 
+                settings.DEFAULT_FROM_EMAIL, 
+                [email]
             )
         except Exception as e:
             new_user.delete()
             context["error"] = f"Email failed: {e}"
             return render(request, "votingApp/register.html", context)
 
-        # Pass ID to success message so they can write it down
-        messages.success(
-            request,
-            f"Registration successful! Your Voter ID is {generated_voter_id}. Check email for OTP.",
-        )
+        messages.success(request, f"Registration successful! Your Voter ID is {generated_voter_id}. Check email for OTP.")
         return redirect("verify_otp")
 
-    # GET request logic...
-    context["elections"] = Election.objects.all()
-    context["parties"] = Party.objects.all()
     return render(request, "votingApp/register.html", context)
 
 
@@ -214,35 +181,28 @@ def verify_otp_page(request):
             user.userprofile.is_email_verified = True
             user.userprofile.save()
             request.session.flush()
-
+            
             messages.success(request, "Email verified! You can now log in.")
             return redirect("login")
         else:
-            return render(
-                request, "votingApp/verify_otp.html", {"error": "Invalid OTP."}
-            )
+            return render(request, "votingApp/verify_otp.html", {"error": "Invalid OTP."})
     return render(request, "votingApp/verify_otp.html")
 
 
 # --- 4. Voter Login ---
-
-
 def login_page(request):
     context = {"active_tab": "voter"}
     if request.method == "POST":
-        login_input = request.POST.get("username")  # Could be ID or Email
+        login_input = request.POST.get("username") # Could be ID or Email
         password = request.POST.get("password")
-
-        # --- LOGIC: Determine if Email or User ID ---
+        
         username_to_auth = login_input
         if "@" in login_input:
             try:
                 user_obj = User.objects.get(email=login_input)
-                username_to_auth = user_obj.username  # Get the actual Voter ID
+                username_to_auth = user_obj.username
             except User.DoesNotExist:
-                # Let authenticate fail naturally later
                 pass
-        # --------------------------------------------
 
         try:
             user_exists = User.objects.get(username=username_to_auth)
@@ -251,16 +211,14 @@ def login_page(request):
                 return render(request, "votingApp/login.html", context)
         except User.DoesNotExist:
             pass
-
+        
         user = authenticate(request, username=username_to_auth, password=password)
-
         if user is not None:
             login(request, user)
             return redirect("dashboard")
         else:
             context["error"] = "Invalid credentials."
             return render(request, "votingApp/login.html", context)
-
     return render(request, "votingApp/login.html", context)
 
 
@@ -276,23 +234,20 @@ def dashboard_page(request):
     try:
         profile = request.user.userprofile
     except UserProfile.DoesNotExist:
-        # If profile missing, force logout to prevent crash
         logout(request)
         messages.error(request, "Profile missing. Please register again.")
         return redirect("register")
 
     now = timezone.now()
     active_elections = Election.objects.filter(start_time__lte=now, end_time__gte=now)
-
+    
     eligible_elections_query = active_elections.filter(
-        Q(election_type=Election.Electiontype.NATIONAL)
-        | Q(election_type=Election.Electiontype.STATE, state=profile.state)
+        Q(election_type=Election.Electiontype.NATIONAL) | 
+        Q(election_type=Election.Electiontype.STATE, state=profile.state)
     )
-
-    voted_election_ids = VoterRecord.objects.filter(user=request.user).values_list(
-        "election_id", flat=True
-    )
-
+    
+    voted_election_ids = VoterRecord.objects.filter(user=request.user).values_list("election_id", flat=True)
+    
     eligible_elections = []
     if profile.is_verified:
         for election in eligible_elections_query:
@@ -313,7 +268,7 @@ def profile_page(request):
     try:
         profile = user.userprofile
     except UserProfile.DoesNotExist:
-        profile = UserProfile.objects.create(user=user, age=18, state="MH")
+        profile = UserProfile.objects.create(user=user, age=18, state='MH')
 
     states = UserProfile.StateChoices.choices
 
@@ -322,7 +277,7 @@ def profile_page(request):
         user.last_name = request.POST.get("last_name")
         user.email = request.POST.get("email")
         user.save()
-
+        
         try:
             profile.age = int(request.POST.get("age"))
             if profile.age < 18:
@@ -330,8 +285,12 @@ def profile_page(request):
                 return redirect("profile")
         except ValueError:
             pass
-
+            
         profile.state = request.POST.get("state")
+        
+        if 'profile_photo' in request.FILES:
+            profile.profile_photo = request.FILES['profile_photo']
+            
         profile.save()
         messages.success(request, "Profile Updated.")
         return redirect("profile")
@@ -360,16 +319,10 @@ def results_page(request):
                 if vote_count > max_votes:
                     max_votes = vote_count
                     winner = candidate
-            election.results = dict(
-                sorted(results_dict.items(), key=lambda item: item[1], reverse=True)
-            )
+            election.results = dict(sorted(results_dict.items(), key=lambda item: item[1], reverse=True))
             election.winner = winner
         elections_with_results.append(election)
-    return render(
-        request,
-        "votingApp/results.html",
-        {"elections_with_results": elections_with_results},
-    )
+    return render(request, "votingApp/results.html", {"elections_with_results": elections_with_results})
 
 
 # --- 9. Vote Page ---
@@ -393,15 +346,14 @@ def vote_page(request, election_slug):
     if not (election.start_time <= now and election.end_time >= now):
         messages.error(request, "Election closed.")
         return redirect("dashboard")
-
+    
     is_eligible = election.election_type == Election.Electiontype.NATIONAL or (
-        election.election_type == Election.Electiontype.STATE
-        and election.state == profile.state
+        election.election_type == Election.Electiontype.STATE and election.state == profile.state
     )
     if not is_eligible:
         messages.error(request, "Not eligible.")
         return redirect("dashboard")
-
+        
     if VoterRecord.objects.filter(user=request.user, election=election).exists():
         messages.error(request, "Already voted.")
         return redirect("dashboard")
@@ -411,7 +363,7 @@ def vote_page(request, election_slug):
         if not candidate_id:
             messages.error(request, "Select a candidate.")
             return render(request, "votingApp/vote_page.html", {"election": election})
-
+        
         selected_candidate = get_object_or_404(Candidate, id=candidate_id)
         Vote.objects.create(candidate=selected_candidate, election=election)
         VoterRecord.objects.create(user=request.user, election=election)
@@ -428,89 +380,92 @@ def candidate_register_page(request):
     state_choices = UserProfile.StateChoices.choices
 
     context = {
-        "elections": elections,
-        "parties": parties,
-        "states": state_choices,
-        "active_tab": "candidate",
+        'elections': elections, 
+        'parties': parties, 
+        'states': state_choices, 
+        'active_tab': 'candidate'
     }
 
-    if request.method == "POST":
-        # Note: We DO NOT get 'username' from POST because we generate it
-        email = request.POST.get("email")
-        pass1 = request.POST.get("password")
-        pass2 = request.POST.get("confirm_password")
-        fname = request.POST.get("first_name")
-        lname = request.POST.get("last_name")
-        election_id = request.POST.get("election_id")
-
-        # --- LOGIC: Determine State (for ID generation) ---
-        # We must use the logic we discussed: if State election, force state.
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        pass1 = request.POST.get('password')
+        pass2 = request.POST.get('confirm_password')
+        fname = request.POST.get('first_name')
+        lname = request.POST.get('last_name')
+        election_id = request.POST.get('election_id')
+        
+        # Determine State
         election_obj = Election.objects.get(id=election_id)
         if election_obj.election_type == Election.Electiontype.STATE:
             selected_state = election_obj.state
         else:
-            selected_state = request.POST.get("state")
+            selected_state = request.POST.get('state')
 
-        party_mode = request.POST.get("party_select")
-
+        party_mode = request.POST.get('party_select')
+        candidate_photo = request.FILES.get('candidate_photo')
+        
         # Party Data
-        new_party_name = request.POST.get("new_party_name")
-        new_party_abbr = request.POST.get("new_party_abbr")
-        new_party_symbol = request.FILES.get("new_party_symbol")
+        new_party_name = request.POST.get('new_party_name')
+        new_party_abbr = request.POST.get('new_party_abbr')
+        new_party_symbol = request.FILES.get('new_party_symbol')
 
         if pass1 != pass2:
-            context["error"] = "Passwords do not match."
-            return render(request, "votingApp/register.html", context)
-
+            context['error'] = "Passwords do not match."
+            return render(request, 'votingApp/register.html', context)
+        
         if User.objects.filter(email=email).exists():
-            context["error"] = "Email already registered."
+            context['error'] = "Email already registered."
+            return render(request, 'votingApp/register.html', context)
+
+        # --- 1. Check Custom Complexity ---
+        complexity_error = check_password_complexity(pass1)
+        if complexity_error:
+            context["error"] = complexity_error
             return render(request, "votingApp/register.html", context)
 
-        # --- NEW: Generate ID ---
+        # --- Generate ID ---
         generated_voter_id = generate_unique_voter_id(selected_state)
 
+        # --- 2. Check Django Validators ---
         try:
             validate_password(pass1, user=User(username=generated_voter_id))
         except ValidationError as e:
-            context["error"] = e.messages[0]
-            return render(request, "votingApp/register.html", context)
-
+            context['error'] = " ".join(e.messages)
+            return render(request, 'votingApp/register.html', context)
+        
         # --- PARTY CHECK ---
         selected_party = None
-        if party_mode == "existing":
-            selected_party = Party.objects.get(id=request.POST.get("existing_party_id"))
-        elif party_mode == "new":
+        if party_mode == 'existing':
+            selected_party = Party.objects.get(id=request.POST.get('existing_party_id'))
+        elif party_mode == 'new':
             if Party.objects.filter(name=new_party_name).exists():
-                context["error"] = f"Party '{new_party_name}' exists."
-                return render(request, "votingApp/register.html", context)
-            if (
-                new_party_abbr
-                and Party.objects.filter(abbreviation=new_party_abbr).exists()
-            ):
-                context["error"] = f"Abbreviation '{new_party_abbr}' exists."
-                return render(request, "votingApp/register.html", context)
+                context['error'] = f"Party '{new_party_name}' exists."
+                return render(request, 'votingApp/register.html', context)
+            if new_party_abbr and Party.objects.filter(abbreviation=new_party_abbr).exists():
+                context['error'] = f"Abbreviation '{new_party_abbr}' exists."
+                return render(request, 'votingApp/register.html', context)
 
         # --- CREATE ---
         user = User.objects.create_user(
-            username=generated_voter_id,  # Use generated ID
-            email=email,
-            password=pass1,
-            is_active=False,
+            username=generated_voter_id, # Use generated ID 
+            email=email, 
+            password=pass1, 
+            is_active=False
         )
         user.first_name = fname
         user.last_name = lname
         user.save()
-
+        
         UserProfile.objects.create(
-            user=user, age=25, state=selected_state, is_verified=False
+            user=user, 
+            age=25, 
+            state=selected_state, 
+            is_verified=False,
+            profile_photo=candidate_photo # Save photo to user profile too for sidebar
         )
 
-        if party_mode == "new":
-            selected_party = Party.objects.create(
-                name=new_party_name,
-                abbreviation=new_party_abbr,
-                symbol=new_party_symbol,
-            )
+        if party_mode == 'new':
+            selected_party = Party.objects.create(name=new_party_name, abbreviation=new_party_abbr, symbol=new_party_symbol)
 
         try:
             Candidate.objects.create(
@@ -518,56 +473,52 @@ def candidate_register_page(request):
                 name=f"{fname} {lname}",
                 election=election_obj,
                 party=selected_party,
-                is_independent=(party_mode == "independent"),
+                is_independent=(party_mode == 'independent'),
+                candidate_photo=candidate_photo
             )
         except Exception as e:
             user.delete()
-            context["error"] = f"Error: {e}"
-            return render(request, "votingApp/register.html", context)
+            context['error'] = f"Error: {e}"
+            return render(request, 'votingApp/register.html', context)
 
         otp = random.randint(100000, 999999)
-        request.session["verification_otp"] = otp
-        request.session["verification_user_id"] = user.id
-        request.session["otp_creation_time"] = time.time()
-
+        request.session['verification_otp'] = otp
+        request.session['verification_user_id'] = user.id
+        request.session['otp_creation_time'] = time.time()
+        
         try:
-            # Include ID in email
-            message = f"Your Candidate OTP is: {otp}\nYour Candidate ID is: {generated_voter_id}"
             send_mail(
-                "Candidate Verification", message, settings.DEFAULT_FROM_EMAIL, [email]
+                'Candidate Verification', 
+                f'OTP: {otp}\nYour Candidate ID is: {generated_voter_id}', 
+                settings.DEFAULT_FROM_EMAIL, 
+                [email]
             )
         except Exception as e:
             user.delete()
-            context["error"] = f"Email Error: {e}"
-            return render(request, "votingApp/register.html", context)
+            context['error'] = f"Email Error: {e}"
+            return render(request, 'votingApp/register.html', context)
 
-        messages.success(
-            request,
-            f"Registration successful! Your Candidate ID is {generated_voter_id}. Verify email.",
-        )
-        return redirect("verify_otp")
+        messages.success(request, f"Registration successful! Your Candidate ID is {generated_voter_id}. Verify email.")
+        return redirect('verify_otp')
 
-    return render(request, "votingApp/register.html", context)
+    return render(request, 'votingApp/register.html', context)
 
 
 # --- 11. Candidate Login ---
 def candidate_login(request):
-    context = {"active_tab": "candidate"}
+    context = {"active_tab":"candidate"}
     if request.method == "POST":
-        username = request.POST.get("username")  # This could be ID or Email
+        username = request.POST.get("username")
         passw = request.POST.get("password")
-
-        # --- LOGIC: Determine if Email or User ID ---
+        
         username_to_auth = username
         if "@" in username:
             try:
                 user_obj = User.objects.get(email=username)
-                username_to_auth = user_obj.username  # Get the actual Voter ID
+                username_to_auth = user_obj.username
             except User.DoesNotExist:
                 pass
-        # --------------------------------------------
-
-        # NOW authenticate using the resolved username
+        
         user = authenticate(request, username=username_to_auth, password=passw)
 
         if user is not None:
@@ -575,25 +526,25 @@ def candidate_login(request):
                 try:
                     profile = user.userprofile
                 except UserProfile.DoesNotExist:
-                    context["error"] = "Critical Error: No Profile."
+                    context['error'] = "Critical Error: No Profile."
                     return render(request, "votingApp/login.html", context)
 
                 if not profile.is_verified:
-                    context["error"] = "Pending Admin Approval."
+                    context['error'] = "Pending Admin Approval."
                     return render(request, "votingApp/login.html", context)
                 if not profile.is_email_verified:
-                    context["error"] = "Verify Email First."
+                    context['error'] = "Verify Email First."
                     return render(request, "votingApp/login.html", context)
 
                 login(request, user)
                 return redirect("candidate_dashboard")
             else:
-                context["error"] = "Not a registered candidate."
+                context['error'] = "Not a registered candidate."
                 return render(request, "votingApp/login.html", context)
         else:
-            context["error"] = "Invalid credentials."
+            context['error'] = "Invalid credentials."
             return render(request, "votingApp/login.html", context)
-
+            
     return render(request, "votingApp/login.html", context)
 
 
@@ -603,16 +554,16 @@ def candidate_dashboard(request):
     try:
         candidate = request.user.candidate
     except:
-        return redirect("dashboard")
+        return redirect('dashboard') 
 
     if request.method == "POST":
         choice = request.POST.get("party_choice")
-
+        
         if choice == "independent":
             candidate.party = None
             candidate.is_independent = True
             candidate.save()
-            messages.success(request, "You are an Independent candidate now!.")
+            messages.success(request, "You are now Independent.")
 
         elif choice == "existing":
             party_id = request.POST.get("existing_party_id")
@@ -626,33 +577,26 @@ def candidate_dashboard(request):
             new_party_name = request.POST.get("new_party_name")
             new_party_abbr = request.POST.get("new_party_abbr")
             new_party_symbol = request.FILES.get("new_party_symbol")
-
+            
             if new_party_name:
                 if Party.objects.filter(name=new_party_name).exists():
                     messages.error(request, "Party name exists.")
-                    return redirect("candidate_dashboard")
-                if (
-                    new_party_abbr
-                    and Party.objects.filter(abbreviation=new_party_abbr).exists()
-                ):
+                    return redirect('candidate_dashboard')
+                if new_party_abbr and Party.objects.filter(abbreviation=new_party_abbr).exists():
                     messages.error(request, "Abbreviation exists.")
-                    return redirect("candidate_dashboard")
-
+                    return redirect('candidate_dashboard')
+                
                 party = Party.objects.create(
-                    name=new_party_name,
+                    name=new_party_name, 
                     abbreviation=new_party_abbr,
-                    symbol=new_party_symbol,
+                    symbol=new_party_symbol
                 )
                 candidate.party = party
                 candidate.is_independent = False
                 candidate.save()
-                messages.success(request, f"Created and joined {party.name}.")
+                messages.success(request, f"Created {party.name}.")
 
-        return redirect("candidate_dashboard")
+        return redirect('candidate_dashboard')
 
     parties = Party.objects.all()
-    return render(
-        request,
-        "votingApp/candidate_dashboard.html",
-        {"candidate": candidate, "parties": parties},
-    )
+    return render(request, "votingApp/candidate_dashboard.html", {"candidate": candidate, "parties": parties})
