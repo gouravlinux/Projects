@@ -1,36 +1,59 @@
 {% extends 'votingApp/base.html' %}
-{% block title %}Results - e-Sanchay{% endblock %}
+{% block title %}Results - e-Chayan{% endblock %}
 
 {% block content %}
 <div class="container">
-    <h1>Election Results</h1>
+    <h1 class="text-center my-4">Election Results</h1>
     
     {% for election in elections_with_results %}
         <div class="result-card">
             <h3>{{ election.name }}</h3>
             
             {% if election.is_active %}
-                <p><strong>Status:</strong> This election is still active. Results will be shown after it ends.</p>
+                <div class="alert-message" style="background-color: #e2e3e5; color: #383d41;">
+                    <strong>Status:</strong> This election is still active. Results will be declared on {{ election.end_time }}.
+                </div>
             {% else %}
-                <p><strong>Status:</strong> This election has concluded.</p>
-                <h4 style="margin-top: 20px;">Final Tally:</h4>
-                <ul style="list-style: none; padding-left: 0;">
+                <p><strong>Status:</strong> Concluded</p>
+                
+                {% if election.winner %}
+                    <div class="alert-message alert-success">
+                        <h4>🏆 Winner: {{ election.winner.name }}</h4>
+                        <p>
+                            {% if election.winner.is_independent %}
+                                (Independent Candidate)
+                            {% else %}
+                                ({{ election.winner.party.name }})
+                            {% endif %}
+                        </p>
+                    </div>
+                {% endif %}
+
+                <h4 style="margin-top: 20px;">Full Tally:</h4>
+                <ul class="list-group">
                     {% for candidate, vote_count in election.results.items %}
-                        <li style="font-size: 1.1em; margin-bottom: 10px;">
-                            <strong>{{ candidate.name }} ({{ candidate.party.name }})</strong>:
-                            <span style="color: var(--primary-color); font-weight: bold;">
-                                {{ vote_count }} votes
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <span style="font-size: 1.1em; font-weight: 600;">{{ candidate.name }}</span>
+                                <br>
+                                <small class="text-muted">
+                                    {% if candidate.is_independent %}
+                                        Independent
+                                    {% else %}
+                                        {{ candidate.party.name }}
+                                    {% endif %}
+                                </small>
+                            </div>
+                            <span class="badge bg-primary rounded-pill" style="font-size: 1em;">
+                                {{ vote_count }} Votes
                             </span>
                         </li>
                     {% endfor %}
                 </ul>
-                <h3 style="margin-top: 20px; color: var(--success-color);">
-                    Winner: {{ election.winner.name }}
-                </h3>
             {% endif %}
         </div>
     {% empty %}
-        <p>There are no election results to display at this time.</p>
+        <p class="text-center">There are no election results to display at this time.</p>
     {% endfor %}
     
 </div>
