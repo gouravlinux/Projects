@@ -173,5 +173,42 @@
             newDiv.style.display = 'none';
         }
     }
+
+    // 2. Election -> State Auto-Selection Logic
+    const electionSelect = document.querySelector('select[name="election_id"]');
+    const stateSelect = document.getElementById('state_select');
+
+    electionSelect.addEventListener('change', function() {
+        const electionId = this.value;
+        
+        if (electionId) {
+            // Call Django AJAX View
+            fetch(`{% url 'ajax_election_details' %}?election_id=${electionId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.type === 'S') { 
+                        // STATE ELECTION: Auto-select and Lock
+                        stateSelect.value = data.state;
+                        stateSelect.classList.add('disabled-input'); // Optional styling
+                        
+                        // We disable the visible select so user can't change it
+                        // But we MUST ensure the backend handles this, 
+                        // because disabled fields aren't sent in POST.
+                        stateSelect.style.pointerEvents = "none"; 
+                        stateSelect.style.backgroundColor = "#e9ecef";
+                    } else {
+                        // NATIONAL ELECTION: Unlock and Reset
+                        stateSelect.value = "";
+                        stateSelect.style.pointerEvents = "auto";
+                        stateSelect.style.backgroundColor = "white";
+                    }
+                });
+        } else {
+            // Reset if no election selected
+            stateSelect.value = "";
+            stateSelect.style.pointerEvents = "auto";
+            stateSelect.style.backgroundColor = "white";
+        }
+    }); 
 </script>
 {% endblock %}
