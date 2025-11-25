@@ -15,6 +15,8 @@ from django.http import JsonResponse
 import time
 import re # Required for password complexity checks
 
+
+
 # --- HELPER: Generate Unique Voter ID ---
 def generate_unique_voter_id(state_code):
     state_map = {
