@@ -43,18 +43,36 @@
                         
                         <p style="margin: 0; color: #666;">
                             {% if candidate.is_independent %}
-                                <strong>Affiliation:</strong> Independent
+                                <span class="badge bg-secondary">Independent</span>
                             {% else %}
-                                <strong>Party:</strong> {{ candidate.party.name }} ({{ candidate.party.abbreviation|default:"" }})
+                                {% if candidate.party %}
+                                    <strong>Party:</strong> {{ candidate.party.name }} 
+                                    {% if candidate.party.abbreviation %}
+                                        ({{ candidate.party.abbreviation }})
+                                    {% endif %}
+                                {% else %}
+                                    <span class="text-muted">Unknown Affiliation</span>
+                                {% endif %}
                             {% endif %}
                         </p>
                     </div>
 
-                    <div>
-                        {% if not candidate.is_independent and candidate.party.symbol %}
-                            <img src="{{ candidate.party.symbol.url }}" style="width: 50px; height: 50px; object-fit: contain;" title="{{ candidate.party.name }}">
+                    <div style="margin-left: 15px;">
+                        {% if candidate.is_independent %}
+                            <div style="width: 50px; text-align: center; color: #888;" title="Independent">
+                                <i class="bi bi-person-fill" style="font-size: 2rem;"></i>
+                            </div>
+                        {% else %}
+                            {% if candidate.party and candidate.party.symbol %}
+                                <img src="{{ candidate.party.symbol.url }}" style="width: 50px; height: 50px; object-fit: contain;" title="{{ candidate.party.name }}">
+                            {% else %}
+                                <div style="width: 50px; text-align: center; color: #ccc;">
+                                    <i class="bi bi-flag" style="font-size: 2rem;"></i>
+                                </div>
+                            {% endif %}
                         {% endif %}
                     </div>
+
                 </div>
             </div>
             {% endfor %}
