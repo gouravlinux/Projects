@@ -1,3 +1,8 @@
+# A BIG NOTE: 
+
+Please wait if the website doesn't open and an animation of render.com occurs (as the service is waking up). 
+
+OR if it is seen that services are suspended(then I need to start it up(msg. me if you have my no. or email)).
 # E_CHAYAN Project 
 
 Website Link: https://electronicchayan.onrender.com/
